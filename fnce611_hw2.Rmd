@@ -1,0 +1,145 @@
+---
+title: "FNCE611 Problem Set 2"
+author: "Jessica Blum, Jordan Farrer, Marc Lanthemann"
+date: '2017-02-13'
+output: function(...) {
+
+          fmt <- rmarkdown::pdf_document(toc = TRUE, number_section = TRUE, df_print = 'kable',...)
+        
+          fmt$knitr$knit_hooks$size = function(before, options, envir) {
+            if (before) return(paste0("\n \\", options$size, "\n\n"))
+            else return("\n\n \\normalsize \n")
+          }
+        
+          return(fmt)
+        }
+
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE, fig.align = 'center', size = 'small')
+options(digits = 2)
+pacman::p_load(tidyverse, googlesheets, pander)
+suppressMessages(gs_auth(token = "/home/rstudio/Dropbox/googlesheets_token.rds", verbose = FALSE))
+```
+
+# Corporate Bonds
+
+## Yield to Maturity
+
+If the coupon rate is 7.25%, then every 6 months Whole Foods will pay $1000 \times \frac{0.0725}{2} = 36.25$. Thus we can calculate the yield to maturity in Dec 2015 as
+
+\begin{equation}
+\ PV = \frac{coupon}{(1+\frac{y}{2})^1} + \frac{coupon}{(1+\frac{y}{2})^2} + \dotsm + \frac{FV + coupon}{(1+\frac{y}{2})^{20}}
+\end{equation}
+
+\begin{equation}
+\ 998.79 = \frac{36.25}{(1+\frac{y}{2})^1} + \frac{36.25}{(1+\frac{y}{2})^2} + \dotsm + \frac{1000 + 36.25}{(1+\frac{y}{2})^{20}}
+\end{equation}
+
+where
+
+```{r}
+ytm <- function(price, coupon, term, freq, prin = 100) {
+    npv <- function(yld, term, cpn, freq, prin) {
+        i <- 1:(term * freq)
+        payment <- (coupon / freq) * prin
+        disc <- (1 + yld / freq)
+        sum(payment / disc^(i)) + prin /(disc^(term * freq))
+    }
+    uniroot(function(yld) npv(yld, term, cpn, freq, prin) - price,
+interval=c(0,100), tol=0.000001)$root
+}
+
+y = ytm(price = 998.79, coupon = 0.0725, term = 10, freq = 2, prin = 1000)
+```
+
+
+
+$$y = `r round(100*y, 3)`\%$$
+
+## Spread
+
+$$Spread = ytm_{Coupon} - ytm_{treasury\, security}$$
+
+$$Spread = `r round(y*100,2)`\% - 4.17\% = `r round((y - 0.0417) * 100,2)`\%$$
+
+# Valuing Stocks
+
+Our solution was created in a spreadsheet and produced below:
+
+```{r}
+waw <- gs_title("FNCE611") %>%  gs_read(ws = "2.2")
+
+waw %>% pander(missing = "")
+```
+
+The current value of a share of WAW stock is **`r waw %>% filter(t == "NPV") %>% select(pv) %>% unlist()`**.
+
+# Growing Perpetuity
+
+From the perpetuity formula, we know the value of the contract will be the first payment divided by $r-g$. So, 
+
+$$Value = \frac{First\, Payment}{r-g} = \frac{0.002 \times \$350m}{r - g}$$
+
+We also know that 
+
+$$r = dividend\,yield + growth\,rate$$
+
+so 
+
+$$r-g = dividend\,yield = 0.04$$
+
+Finally,
+
+$$Value = \frac{0.002 \times \$350m}{0.04} = \$17.5m$$
+
+
+# NPV and Payback Rule
+
+## NPV
+
+Project 1: $NPV = -1000 + \frac{1000}{1.10} = `r -1000+1000/1.1`$
+
+Project 2: $NPV = -2000 + \frac{1000}{1.10} + \frac{1000}{1.10^2} + \frac{4000}{1.10^3} + \frac{1000}{1.10^4} + \frac{1000}{1.10^5}= `r -2000+1000/1.1 +1000/1.1^2+4000/1.1^3+1000/1.1^4+1000/1.1^5`$
+
+Project 3: $NPV = -3000 + \frac{1000}{1.10} + \frac{1000}{1.10^2} + \frac{1000}{1.10^4} + \frac{1000}{1.10^5}= `r -3000+1000/1.1 +1000/1.1^2+1000/1.1^4+1000/1.1^5`$
+
+We see that Project 2 and Project 3 have positive NPV.
+
+## Payback Period
+
+|Project|Payback Period|
+|:---:|:---:|
+|1|1 year|
+|2|2 years|
+|3|4 years|
+
+With a cutoff period of three years, the firm would accept projects 1 and 2.
+
+# IRR
+
+Two disadvantages of the IRR Rule include
+
+1. If the NPV rule is not a smoothly declining function of discount rate, the IRR rule can give an answer that is different than the NPV rule (i.e. multiple rates of return)
+2. When comparing mutually exclusinve projects, one project can have a higher IRR than another, but a lower NPV and a manager would want to pick the project with the higher NPV
+
+# Capital Budgeting
+
+Our solution was created in a spreadsheet and produced below, assuming PPC has a tax rate of 35% and discount rate of 15%:
+
+```{r}
+cap_budget1 <- gs_title("FNCE611") %>%  gs_read(ws = "2.6.1")
+
+cap_budget1 %>% 
+  pander(missing = "", justify = c('left', 'right', 'right', 'right','right'))
+```
+
+```{r}
+cap_budget2 <- gs_title("FNCE611") %>%  gs_read(ws = "2.6.2")
+
+cap_budget2 %>% pander(missing = "", justify = c('left', 'right', 'right', 'right','right'),
+                       caption = "Net Cash Flows")
+```
+
+The NPV of the project is **`r (unlist((cap_budget2 %>% filter(Time == "NPV"))[, 5]))`m**.
