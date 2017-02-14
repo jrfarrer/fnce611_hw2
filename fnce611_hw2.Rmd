@@ -122,7 +122,7 @@ With a cutoff period of three years, the firm would accept projects 1 and 2.
 Two disadvantages of the IRR Rule include
 
 1. If the NPV rule is not a smoothly declining function of discount rate, the IRR rule can give an answer that is different than the NPV rule (i.e. multiple rates of return)
-2. When comparing mutually exclusinve projects, one project can have a higher IRR than another, but a lower NPV and a manager would want to pick the project with the higher NPV
+2. When comparing mutually exclusive projects, one project can have a higher IRR than another, but a lower NPV and a manager would want to pick the project with the higher NPV
 
 # Capital Budgeting
 
